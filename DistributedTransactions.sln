@@ -1,0 +1,53 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31717.71
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C6964159-E798-49A3-B596-B7E490A49E18}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DistributedTransactions", "src\DistributedTransactions\DistributedTransactions.csproj", "{B9BD7EFE-9F3D-4805-9FEE-FC1CC21734AB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EDD46370-F754-4866-8EF0-7D0E297C1FEC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DistributedTransactions.Tests", "tests\DistributedTransactions.Tests\DistributedTransactions.Tests.csproj", "{C7EA293B-868E-4DDF-8317-BC08AC702703}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DistributedTransactions.DAL", "src\DistributedTransactions.DAL\DistributedTransactions.DAL.csproj", "{C353880B-03A3-42AC-A029-20329F182FB5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DistributedTransactions.Helpers", "src\DistributedTransactions.Helpers\DistributedTransactions.Helpers.csproj", "{F55469D6-3833-4F15-91CC-0147B9DA2819}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B9BD7EFE-9F3D-4805-9FEE-FC1CC21734AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9BD7EFE-9F3D-4805-9FEE-FC1CC21734AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9BD7EFE-9F3D-4805-9FEE-FC1CC21734AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9BD7EFE-9F3D-4805-9FEE-FC1CC21734AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7EA293B-868E-4DDF-8317-BC08AC702703}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7EA293B-868E-4DDF-8317-BC08AC702703}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7EA293B-868E-4DDF-8317-BC08AC702703}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7EA293B-868E-4DDF-8317-BC08AC702703}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C353880B-03A3-42AC-A029-20329F182FB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C353880B-03A3-42AC-A029-20329F182FB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C353880B-03A3-42AC-A029-20329F182FB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C353880B-03A3-42AC-A029-20329F182FB5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F55469D6-3833-4F15-91CC-0147B9DA2819}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F55469D6-3833-4F15-91CC-0147B9DA2819}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F55469D6-3833-4F15-91CC-0147B9DA2819}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F55469D6-3833-4F15-91CC-0147B9DA2819}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B9BD7EFE-9F3D-4805-9FEE-FC1CC21734AB} = {C6964159-E798-49A3-B596-B7E490A49E18}
+		{C7EA293B-868E-4DDF-8317-BC08AC702703} = {EDD46370-F754-4866-8EF0-7D0E297C1FEC}
+		{C353880B-03A3-42AC-A029-20329F182FB5} = {C6964159-E798-49A3-B596-B7E490A49E18}
+		{F55469D6-3833-4F15-91CC-0147B9DA2819} = {C6964159-E798-49A3-B596-B7E490A49E18}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {767F7C34-FCD0-4F82-BEDB-D4FF9A0A77EB}
+	EndGlobalSection
+EndGlobal
