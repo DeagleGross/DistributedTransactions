@@ -3,24 +3,24 @@ using System;
 
 namespace DistributedTransactions.Models
 {
-    public record DistributedTranscationOperationInfo
+    public record DistributedTransactionOperationInfo
     {
-        public long OperationId { get; }
+        public string TransactionType { get; }
 
-        public long TransactionGroupId { get; }
-
-        public int? OperatorPriority { get; }
+        public string OperationType { get; }
 
         public Type RollbackDataType { get; }
 
-        public DistributedTranscationOperationInfo(DistributedTransactionAttribute attribute)
+        public int? OperationPriority { get; }
+
+        public DistributedTransactionOperationInfo(DistributedTransactionAttribute attribute)
         {
-            OperationId = attribute.OperationId;
-            TransactionGroupId = attribute.TransactionGroupId;
-            OperatorPriority = attribute.OperationPriority;
+            TransactionType = attribute.TransactionType;
+            OperationType = attribute.OperationType;
             RollbackDataType = attribute.RollbackDataType;
+            OperationPriority = attribute.OperationPriority;
         }
 
-        public override string ToString() => $"OperationInfo: OperationId='{OperationId}', TransactionGroupId='{TransactionGroupId}', OperatorPriority='{OperatorPriority}'";
+        public override string ToString() => $"OperationInfo: OperationType='{OperationType}', TransactionType='{TransactionType}', OperationPriority='{OperationPriority}'";
     }
 }

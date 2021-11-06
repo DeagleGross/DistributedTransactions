@@ -1,22 +1,30 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace DistributedTransactions.Attributes
 {
     [AttributeUsage(AttributeTargets.Class, Inherited = true)]
     public class DistributedTransactionAttribute : Attribute
     {
-        public long OperationId { get; set; }
+        public string TransactionType { get; }
 
-        public long TransactionGroupId { get; }
-
-        public int? OperationPriority { get; }
+        public string OperationType { get; }
 
         public Type RollbackDataType { get; }
 
-        public DistributedTransactionAttribute(long operationId, long transactionGroupId, Type rollbackDataType, int? operationPriority = null)
+        public int? OperationPriority { get; }
+
+        public DistributedTransactionAttribute(string transactionType, string operationType, Type rollbackDataType)
         {
-            OperationId = operationId;
-            TransactionGroupId = transactionGroupId;
+            TransactionType = transactionType;
+            OperationType = operationType;
+            RollbackDataType = rollbackDataType;
+        }
+
+        public DistributedTransactionAttribute(string transactionType, string operationType, Type rollbackDataType, int operationPriority)
+        {
+            TransactionType = transactionType;
+            OperationType = operationType;
             RollbackDataType = rollbackDataType;
             OperationPriority = operationPriority;
         }

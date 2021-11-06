@@ -9,7 +9,5 @@ namespace DistributedTransactions.Models.Abstractions
         Task CommitAsync(CancellationToken cancellationToken);
 
         Task RollbackAsync(CancellationToken cancellationToken);
-
-        IDistributedTransactionOperation Create();
     }
 }

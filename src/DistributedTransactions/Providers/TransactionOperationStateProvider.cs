@@ -16,7 +16,7 @@ namespace DistributedTransactions.Providers
             _transactionOperationRepository = transactionOperationRepository;
         }
 
-        public async Task<DistributedTransactionOperationState<T>> GetAsync<T>(DistributedTranscationOperationInfo operationInfo, CancellationToken cancellationToken) where T : class
+        public async Task<DistributedTransactionOperationState<T>> GetAsync<T>(DistributedTransactionOperationInfo operationInfo, CancellationToken cancellationToken) where T : class
         {
             throw new NotImplementedException();
 

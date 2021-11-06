@@ -18,6 +18,13 @@ namespace DistributedTransactions.DAL.Models
         public long TransactionId { get; set; }
 
         /// <summary>
+        /// Type of operation in a transaction.
+        /// I.e. there could be operation_types: `updateModel`, `createModel` and `deleteModel` in the same transaction.
+        /// It is recommended to pass an enum type here, so that it is easy not to mess up with random int values
+        /// </summary>
+        public int OperationType { get; set; }
+
+        /// <summary>
         /// Priority of operation when rollback of transaction is executed.
         /// </summary>
         public int? RollbackOperationPriority { get; set; }

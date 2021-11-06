@@ -12,9 +12,12 @@
         public long Id { get; set; }
 
         /// <summary>
-        /// Id of transaction group.
+        /// Type of transaction as an int value.
+        /// I.e. there could be such transaction_types: `create model1 and model2 in services`.
+        /// It is just a unique description for recognizing specific type of transaction
+        /// It is recommended to pass an enum type here, so that it is easy not to mess up with random int values
         /// </summary>
-        public long GroupId { get; set; }
+        public int TransactionType { get; set; }
 
         /// <summary>
         /// Current status of transaction
