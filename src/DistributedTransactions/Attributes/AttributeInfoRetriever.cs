@@ -6,10 +6,10 @@ namespace DistributedTransactions.Attributes
 {
     internal static class AttributeInfoRetriever
     {
-        public static DistributedTransactionOperationInfo GetDistributedTransactionAttributeInfo(object instance)
+        public static OperationInfo GetDistributedTransactionAttributeInfo(object instance)
         {
-            var attribute = GetAttribute<DistributedTransactionAttribute>(instance);
-            return new DistributedTransactionOperationInfo(attribute);
+            var attribute = GetAttribute<DistributedTransactionOperationAttribute>(instance);
+            return new OperationInfo(attribute);
         }
 
         private static T GetAttribute<T>(object instance) where T : class

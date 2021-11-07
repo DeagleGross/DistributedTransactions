@@ -15,9 +15,9 @@
         /// Type of transaction as an int value.
         /// I.e. there could be such transaction_types: `create model1 and model2 in services`.
         /// It is just a unique description for recognizing specific type of transaction
-        /// It is recommended to pass an enum type here, so that it is easy not to mess up with random int values
+        /// It is recommended to pass an enum type here, so that it is easy not to mess up with random values
         /// </summary>
-        public int TransactionType { get; set; }
+        public string TransactionType { get; set; }
 
         /// <summary>
         /// Current status of transaction

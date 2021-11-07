@@ -1,12 +1,15 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
+using DistributedTransactions.Builders;
+using DistributedTransactions.Executors;
 using DistributedTransactions.Models;
 using DistributedTransactions.Models.Abstractions;
 using DistributedTransactions.Tests.Base;
+using DistributedTransactions.Tests.Mocks;
 using DistributedTransactions.Tests.Mocks.Database;
 using DistributedTransactions.Tests.Mocks.Models;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace DistributedTransactions.Tests
@@ -17,7 +20,7 @@ namespace DistributedTransactions.Tests
         private MockDatabase _mockDatabase;
 
         [SetUp]
-        public void Setup()
+        public new void Setup()
         {
             _mockDatabase = new MockDatabase();
         }
@@ -25,39 +28,50 @@ namespace DistributedTransactions.Tests
         [Test]
         public async Task CreateManufacturer_CreateAutos_Success()
         {
-            var distributedTransaction = DistributedTransaction.Create(GetLogger<DistributedTransaction>(),
-                TransactionOperationStateProvider);
+            var manufacturer = new Manufacturer
+            {
+                Id = 1,
+                Name = "Audi"
+            };
+
+            var auto = new Auto
+            {
+                Id = 1,
+                ManufacturerId = 1,
+                Name = "A7"
+            };
+
+            var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
+                .CreateDistributedTransactionExecutor()
+                .UseLogger(GetLogger<DistributedTransactionExecutor>())
+                .UseTransactionProvider(TransactionProvider)
+                .UseOperationProvider(OperationProvider);
 
             var createManufacturer = new CreateManufacturer
             {
                 MockDatabase = _mockDatabase,
-                Manufacturer = new Manufacturer
-                {
-                    Id = 1,
-                    Name = "Audi"
-                }
+                Manufacturer = manufacturer
             };
 
             var createAuto = new CreateAuto
             {
                 MockDatabase = _mockDatabase,
-                Auto = new Auto
-                {
-                    Id = 1,
-                    ManufacturerId = 1,
-                    Name = "A7"
-                }
+                Auto = auto
             };
 
-            distributedTransaction.RegisterOperation(createManufacturer);
-            distributedTransaction.RegisterOperation(createAuto);
+            distributedTransactionExecutor.RegisterOperation(createManufacturer);
+            distributedTransactionExecutor.RegisterOperation(createAuto);
 
-            await distributedTransaction.ExecuteFullTransactionAsync(CancellationToken.None);
+            await distributedTransactionExecutor.ExecuteFullTransactionAsync(CancellationToken.None);
 
-            // TODO check all data is loaded to mock_database correctly
+            var manufacturerInDb = _mockDatabase.Manufacturers.GetById(manufacturer.Id);
+            manufacturerInDb.Should().Be(manufacturer);
+
+            var autoInDb = _mockDatabase.Autos.GetById(auto.Id);
+            autoInDb.Should().Be(auto);
         }
 
-        [DistributedTransaction(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer), typeof(long))]
+        [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer), typeof(long))]
         internal class CreateManufacturer : IDistributedTransactionOperation
         {
             public Manufacturer Manufacturer { get; set; }
@@ -80,7 +94,7 @@ namespace DistributedTransactions.Tests
             }
         }
 
-        [DistributedTransaction(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateAuto), typeof(long))]
+        [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateAuto), typeof(long))]
         internal class CreateAuto : IDistributedTransactionOperation
         {
             public Auto Auto { get; set; }
@@ -104,17 +118,6 @@ namespace DistributedTransactions.Tests
                 MockDatabase.Autos.RemoveById(CreatedAutoId);
                 return Task.CompletedTask;
             }
-        }
-
-        public enum OperationType
-        {
-            CreateManufacturer,
-            CreateAuto
-        }
-
-        public enum TransactionType
-        {
-            CreateManufacturerWithAuto
         }
     }
 }

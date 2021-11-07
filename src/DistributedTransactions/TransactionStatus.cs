@@ -1,6 +1,7 @@
 ﻿namespace DistributedTransactions
 {
-    public enum OperationState
+    public enum TransactionStatus
     {
+        Created,
     }
 }

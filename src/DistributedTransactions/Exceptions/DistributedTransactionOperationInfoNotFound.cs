@@ -9,8 +9,8 @@ namespace DistributedTransactions.Exceptions
         {
         }
 
-        public static DistributedTransactionOperationInfoNotFound Create(Type operationType) => new($"No '{nameof(DistributedTransactionAttribute)}' found for operation {operationType}");
+        public static DistributedTransactionOperationInfoNotFound Create(Type operationType) => new($"No '{nameof(DistributedTransactionOperationAttribute)}' found for operation {operationType}");
 
-        public static DistributedTransactionOperationInfoNotFound Create(string operationType) => new($"No '{nameof(DistributedTransactionAttribute)}' found for operation {operationType}");
+        public static DistributedTransactionOperationInfoNotFound Create(string operationType) => new($"No '{nameof(DistributedTransactionOperationAttribute)}' found for operation {operationType}");
     }
 }

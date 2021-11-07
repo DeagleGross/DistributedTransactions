@@ -21,7 +21,7 @@ namespace DistributedTransactions.Tests.Mocks.Database
             }
         }
 
-        public void GetById(long id) => _items.FirstOrDefault(x => x.Id == id);
+        public T GetById(long id) => _items.FirstOrDefault(x => x.Id == id);
 
         public void RemoveById(long id)
         {

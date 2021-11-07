@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace DistributedTransactions.Attributes
 {
     [AttributeUsage(AttributeTargets.Class, Inherited = true)]
-    public class DistributedTransactionAttribute : Attribute
+    public class DistributedTransactionOperationAttribute : Attribute
     {
         public string TransactionType { get; }
 
@@ -14,14 +13,14 @@ namespace DistributedTransactions.Attributes
 
         public int? OperationPriority { get; }
 
-        public DistributedTransactionAttribute(string transactionType, string operationType, Type rollbackDataType)
+        public DistributedTransactionOperationAttribute(string transactionType, string operationType, Type rollbackDataType)
         {
             TransactionType = transactionType;
             OperationType = operationType;
             RollbackDataType = rollbackDataType;
         }
 
-        public DistributedTransactionAttribute(string transactionType, string operationType, Type rollbackDataType, int operationPriority)
+        public DistributedTransactionOperationAttribute(string transactionType, string operationType, Type rollbackDataType, int operationPriority)
         {
             TransactionType = transactionType;
             OperationType = operationType;

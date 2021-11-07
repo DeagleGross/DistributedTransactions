@@ -8,7 +8,8 @@ namespace DistributedTransactions.Extensions
     {
         public static void AddDistributedTransactions(this IServiceCollection services)
         {
-            services.AddScoped<ITransactionOperationStateProvider, TransactionOperationStateProvider>();
+            services.AddScoped<IOperationProvider, OperationProvider>();
+            services.AddScoped<ITransactionProvider, TransactionProvider>();
         }
     }
 }

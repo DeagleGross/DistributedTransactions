@@ -16,7 +16,9 @@ namespace DistributedTransactions.Tests.Base
     {
         private ServiceProvider _serviceProvider;
 
-        protected ITransactionOperationStateProvider TransactionOperationStateProvider => _serviceProvider.GetRequiredService<ITransactionOperationStateProvider>();
+        protected IOperationProvider OperationProvider => _serviceProvider.GetRequiredService<IOperationProvider>();
+        protected ITransactionProvider TransactionProvider => _serviceProvider.GetRequiredService<ITransactionProvider>();
+        
         protected IOperationRepository OperationRepository => _serviceProvider.GetRequiredService<IOperationRepository>();
         protected ILogger<T> GetLogger<T>() => _serviceProvider.GetRequiredService<ILogger<T>>();
 

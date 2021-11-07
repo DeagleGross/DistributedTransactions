@@ -19,7 +19,7 @@ namespace DistributedTransactions.Tests.Mocks
             throw new NotImplementedException();
         }
 
-        public Task AddAsync(OperationEntity entity, CancellationToken cancellationToken)
+        public Task<OperationEntity> CreateAsync(OperationEntity entity, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
