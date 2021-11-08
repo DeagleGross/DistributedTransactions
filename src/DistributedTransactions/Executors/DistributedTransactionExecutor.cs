@@ -1,12 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DistributedTransactions.Attributes;
+using DistributedTransactions.Converters;
 using DistributedTransactions.Exceptions;
 using DistributedTransactions.Helpers.Extensions;
 using DistributedTransactions.Models;
 using DistributedTransactions.Models.Abstractions;
 using DistributedTransactions.Providers.Abstractions;
+using DistributedTransactions.Reflection;
 using Microsoft.Extensions.Logging;
 
 namespace DistributedTransactions.Executors
@@ -15,10 +18,13 @@ namespace DistributedTransactions.Executors
     {
         private readonly LinkedList<OperationExecutorWithInfo> _distributedTransactionOperationWrappers = new();
 
+        private Transaction _transaction;
+        private readonly IList<Operation> _operations = new List<Operation>();
+
         internal ILogger<DistributedTransactionExecutor> Logger { get; set; }
-        
+
         internal IOperationProvider OperationProvider { get; set; }
-        
+
         internal ITransactionProvider TransactionProvider { get; set; }
 
         internal string TransactionType { get; set; }
@@ -27,9 +33,9 @@ namespace DistributedTransactions.Executors
         /// Registers operation in a transaction. Sensitive to order of registering - operations are executed in order of addition.
         /// </summary>
         /// <param name="operation">OperationExecutor with [DistributedTransactionExecutor] attribute to register in a transaction</param>
-        public void RegisterOperation(IDistributedTransactionOperation operation)
+        public void RegisterOperation<T>(IDistributedTransactionOperation<T> operation)
         {
-            var operationInfo = AttributeInfoRetriever.GetDistributedTransactionAttributeInfo(operation);
+            var operationInfo = InstanceInfoRetriever.GetOperationInfo(operation);
 
             if (TransactionType is null)
             {
@@ -40,7 +46,7 @@ namespace DistributedTransactions.Executors
                 throw new DifferentTransactionTypeValuesLoadedException(TransactionType, operationInfo.TransactionType);
             }
 
-            var operationWrapper = new OperationExecutorWithInfo(operation, operationInfo);
+            var operationWrapper = new OperationExecutorWithInfo(OperationConverter.ToObjectInstanceOperation(operation), operationInfo);
 
             _distributedTransactionOperationWrappers.AddLast(operationWrapper);
         }
@@ -52,9 +58,9 @@ namespace DistributedTransactions.Executors
 
             // if there are operations in transaction, it is valid
             // so firstly saving it as a new entity in database
-            var transaction = await TransactionProvider.CreateAsync(new Transaction
+            _transaction = await TransactionProvider.CreateAsync(new Transaction
             {
-                TransactionType = TransactionType,
+                TransactionType = TransactionType
             }, cancellationToken);
 
             while (currentNode is not null)
@@ -63,19 +69,58 @@ namespace DistributedTransactions.Executors
 
                 if (await TryCommitOperationAsync(operationWrapper, cancellationToken))
                 {
-                    // commiting went succesfully, but there is possibility that we need to rollback it
+                    // commiting went successfully, but there is possibility that we need to rollback it
                     // so we have to save data for further update
                     var operation = operationWrapper.OperationExecutor;
-                    var operationinfo = operationWrapper.OperationInfo;
+                    var operationInfo = operationWrapper.OperationInfo;
 
+                    var operationCreated = await OperationProvider.CreateAsync(new Operation
+                    {
+                        TransactionId = _transaction.Id,
+                        OperationType = operationInfo.OperationType,
+                        RollbackOperationPriority = operationInfo.RollbackOperationPriority,
+                        ExecutorType = operationInfo.ExecutorType,
+                        RollbackDataType = operationInfo.RollbackDataType,
+                        RollbackData = operation.RollbackData
+                    }, cancellationToken);
 
+                    _operations.Add(operationCreated);
+                    Logger.LogInformation($"Successfully committed operation #{operationCreated.Id}");
                 }
                 else
                 {
-                    // failed to commit operation, so we need to rollback all operations, that were commited before
+                    // failed to commit operation, so we need to rollback all operations, that were committed before
+                    Logger.LogError(
+                        $"Failed to commit operation in a transaction #{_transaction.Id}. Starting rollback process.");
+
+                    // firstly we need to mark transaction with new status - `NeedsToBeRollback-ed`
+                    // and also all of operations just in case we could not rollback and we could get back to that job later
+                    await TransactionProvider.UpdateTransactionStatus(_transaction.Id, TransactionStatus.NeedsToRollback, cancellationToken);
+                    await OperationProvider.UpdateOperationsStatus(_operations.Select(x => x.Id), OperationStatus.NeedsToRollback, cancellationToken);
+
+                    await RollbackTransaction(cancellationToken);
+                    return;
                 }
 
                 currentNode = currentNode.Next;
+            }
+
+            // if finished correctly, then we need to change transaction status to `finished correctly`.
+            // there is nothing more we need to do
+            await TransactionProvider.UpdateTransactionStatus(_transaction.Id, TransactionStatus.FinishedCorrectly,
+                cancellationToken);
+            Logger.LogInformation($"Successfully finished transaction #{_transaction.Id}");
+        }
+
+        public async Task RollbackTransaction(CancellationToken cancellationToken)
+        {
+            var operationsToRollback = await OperationProvider.GetByTransactionIdAndStatusAsync(_transaction.Id, OperationStatus.NeedsToRollback, cancellationToken);
+            foreach (var operation in operationsToRollback)
+            {
+                // we need to create an instance of an IDistributedTransactionOperation, so that we can invoke Rollback method
+                var operationExecutor = TypeHelper.GetOperationExecutor(operation.ExecutorType, operation.RollbackDataType);
+                operationExecutor = TypeHelper.LoadRollbackDataIntoInstance(operationExecutor, operation.ExecutorType, operation.RollbackDataType, operation.RollbackData);
+                Console.Write(operationExecutor);
             }
         }
 
@@ -94,6 +139,11 @@ namespace DistributedTransactions.Executors
                 Logger.LogError($"Failed while '{nameof(operation.CommitAsync)}' execution of operation \"{operationInfo}\"");
                 return false;
             }
+        }
+
+        private async Task<bool> TryRollbackOperationAsync(OperationExecutorWithInfo operationExecutorWithInfo, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
     }
 }

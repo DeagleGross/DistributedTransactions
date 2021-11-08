@@ -9,22 +9,18 @@ namespace DistributedTransactions.Attributes
 
         public string OperationType { get; }
 
-        public Type RollbackDataType { get; }
-
         public int? OperationPriority { get; }
 
-        public DistributedTransactionOperationAttribute(string transactionType, string operationType, Type rollbackDataType)
+        public DistributedTransactionOperationAttribute(string transactionType, string operationType)
         {
             TransactionType = transactionType;
             OperationType = operationType;
-            RollbackDataType = rollbackDataType;
         }
 
-        public DistributedTransactionOperationAttribute(string transactionType, string operationType, Type rollbackDataType, int operationPriority)
+        public DistributedTransactionOperationAttribute(string transactionType, string operationType, int operationPriority)
         {
             TransactionType = transactionType;
             OperationType = operationType;
-            RollbackDataType = rollbackDataType;
             OperationPriority = operationPriority;
         }
     }

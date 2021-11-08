@@ -9,5 +9,7 @@ namespace DistributedTransactions.Providers.Abstractions
         Task<Transaction> GetByTransactionIdAsync(long transactionId, CancellationToken cancellationToken);
 
         Task<Transaction> CreateAsync(Transaction transaction, CancellationToken cancellationToken);
+
+        Task UpdateTransactionStatus(long transactionId, TransactionStatus newStatus, CancellationToken cancellationToken);
     }
 }

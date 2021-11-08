@@ -2,7 +2,7 @@
 
 namespace DistributedTransactions.Tests.Mocks.Database
 {
-    internal class MockDatabase
+    public class MockDatabase
     {
         public MockDbSet<Auto> Autos { get; set; }
 
@@ -11,6 +11,14 @@ namespace DistributedTransactions.Tests.Mocks.Database
         public MockTransactionDbSet Transactions { get; set; }
 
         public MockOperationDbSet Operations { get; set; }
+
+        public void ClearAll()
+        {
+            Autos.Clear();
+            Manufacturers.Clear();
+            Transactions.Clear();
+            Operations.Clear();
+        }
 
         public MockDatabase()
         {

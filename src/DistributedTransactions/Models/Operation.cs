@@ -2,7 +2,7 @@
 
 namespace DistributedTransactions.Models
 {
-    public class Operation<TRollbackData>
+    public class Operation
     {
         public long Id { get; set; }
 
@@ -12,9 +12,11 @@ namespace DistributedTransactions.Models
 
         public int? RollbackOperationPriority { get; set; }
 
+        public Type ExecutorType { get; set; }
+
         public Type RollbackDataType { get; set; }
 
-        public TRollbackData RollbackData { get; set; }
+        public object RollbackData { get; set; }
 
         public OperationStatus Status { get; set; }
     }

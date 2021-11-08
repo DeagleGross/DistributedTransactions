@@ -28,11 +28,5 @@ namespace DistributedTransactions.Builders
             transactionExecutor.OperationProvider= operationProvider;
             return transactionExecutor;
         }
-
-        public static DistributedTransactionExecutor SetTransactionType(this DistributedTransactionExecutor transactionExecutor, string transactionType)
-        {
-            transactionExecutor.TransactionType = transactionType;
-            return transactionExecutor;
-        }
     }
 }

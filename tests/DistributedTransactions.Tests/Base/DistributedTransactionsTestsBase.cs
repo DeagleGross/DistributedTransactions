@@ -2,6 +2,7 @@
 using DistributedTransactions.Extensions;
 using DistributedTransactions.Providers.Abstractions;
 using DistributedTransactions.Tests.Mocks;
+using DistributedTransactions.Tests.Mocks.Database;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -20,10 +21,15 @@ namespace DistributedTransactions.Tests.Base
         protected ITransactionProvider TransactionProvider => _serviceProvider.GetRequiredService<ITransactionProvider>();
         
         protected IOperationRepository OperationRepository => _serviceProvider.GetRequiredService<IOperationRepository>();
+        
+        protected ITransactionRepository TransactionRepository => _serviceProvider.GetRequiredService<ITransactionRepository>();
+
+        protected MockDatabase MockDatabase => _serviceProvider.GetRequiredService<MockDatabase>();
+
         protected ILogger<T> GetLogger<T>() => _serviceProvider.GetRequiredService<ILogger<T>>();
 
         [OneTimeSetUp]
-        protected void Setup()
+        protected void OneTimeSetup()
         {
             _serviceProvider = SetupServiceProvider();
         }
@@ -34,7 +40,11 @@ namespace DistributedTransactions.Tests.Base
             AddSerilogLogging(services);
 
             services.AddDistributedTransactions();
+
+            // just for mock. Repositories are not implemented in a library actually
+            services.AddSingleton<MockDatabase>();
             services.AddScoped<IOperationRepository, OperationRepository>();
+            services.AddScoped<ITransactionRepository, TransactionRepository>();
 
             return services.BuildServiceProvider();
         }

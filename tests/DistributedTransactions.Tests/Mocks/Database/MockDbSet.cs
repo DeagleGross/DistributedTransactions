@@ -21,6 +21,11 @@ namespace DistributedTransactions.Tests.Mocks.Database
             }
         }
 
+        public void Clear()
+        {
+            _items.Clear();
+        }
+
         public T GetById(long id) => _items.FirstOrDefault(x => x.Id == id);
 
         public void RemoveById(long id)

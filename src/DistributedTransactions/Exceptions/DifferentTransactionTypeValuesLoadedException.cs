@@ -1,6 +1,5 @@
 ﻿using System;
 using DistributedTransactions.Executors;
-using DistributedTransactions.Models;
 
 namespace DistributedTransactions.Exceptions
 {

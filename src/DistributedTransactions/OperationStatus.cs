@@ -2,5 +2,8 @@
 {
     public enum OperationStatus
     {
+        Committed,
+        NeedsToRollback,
+        Rollbacked
     }
 }

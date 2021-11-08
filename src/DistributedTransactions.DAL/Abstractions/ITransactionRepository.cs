@@ -12,8 +12,10 @@ namespace DistributedTransactions.DAL.Abstractions
     {
         Task<TransactionEntity> GetByTransactionIdAsync(long transactionId, CancellationToken cancellationToken);
 
-        Task<IEnumerable<TransactionEntity>> GetByTransactionGroupId(long transactionGroupId, CancellationToken cancellationToken);
+        Task<IEnumerable<TransactionEntity>> GetByTransactionGroupId(string transactionType, CancellationToken cancellationToken);
 
         Task<TransactionEntity> CreateAsync(TransactionEntity entity, CancellationToken cancellationToken);
+
+        Task UpdateTransactionStatusAsync(long transactionId, string newTransactionStatus, CancellationToken cancellationToken);
     }
 }

@@ -1,18 +1,11 @@
 ﻿using DistributedTransactions.Exceptions;
-using DistributedTransactions.Models;
 using System;
 
 namespace DistributedTransactions.Attributes
 {
     internal static class AttributeInfoRetriever
     {
-        public static OperationInfo GetDistributedTransactionAttributeInfo(object instance)
-        {
-            var attribute = GetAttribute<DistributedTransactionOperationAttribute>(instance);
-            return new OperationInfo(attribute);
-        }
-
-        private static T GetAttribute<T>(object instance) where T : class
+        public static T GetAttribute<T>(object instance) where T : class
         {
             var instanceType = instance.GetType();
             var attribute = Attribute.GetCustomAttribute(instanceType, typeof(T)) as T;

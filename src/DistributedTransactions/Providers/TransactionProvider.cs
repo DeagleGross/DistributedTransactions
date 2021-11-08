@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using DistributedTransactions.Converters;
 using DistributedTransactions.DAL.Abstractions;
-using DistributedTransactions.DAL.Models;
 using DistributedTransactions.Models;
 using DistributedTransactions.Providers.Abstractions;
 
@@ -31,6 +30,11 @@ namespace DistributedTransactions.Providers
             var transactionEntity = await _transactionRepository.CreateAsync(TransactionConverter.ToEntity(transaction), cancellationToken);
 
             return TransactionConverter.FromEntity(transactionEntity);
+        }
+
+        public async Task UpdateTransactionStatus(long transactionId, TransactionStatus newStatus, CancellationToken cancellationToken)
+        {
+            await _transactionRepository.UpdateTransactionStatusAsync(transactionId, newStatus.ToString(), cancellationToken);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
@@ -16,7 +17,7 @@ using NUnit.Framework;
 namespace DistributedTransactions.Tests
 {
     [TestFixture]
-    internal class DistributedTransactionsSuccessFlowTests : DistributedTransactionsTestsBase
+    internal class DistributedTransactionsRollbackFlowTests : DistributedTransactionsTestsBase
     {
         private MockDatabase _mockDatabase;
 
@@ -68,17 +69,7 @@ namespace DistributedTransactions.Tests
 
             _mockDatabase.Transactions.Should().NotBeEmpty();
             _mockDatabase.Transactions.First().Should().NotBeNull();
-            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.FinishedCorrectly.ToString());
-
-            _mockDatabase.Operations.Should().NotBeEmpty();
-            _mockDatabase.Operations.First().Should().NotBeNull();
-            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.FinishedCorrectly.ToString());
-
-            var manufacturerInDb = _mockDatabase.Manufacturers.GetById(manufacturer.Id);
-            manufacturerInDb.Should().Be(manufacturer);
-
-            var autoInDb = _mockDatabase.Autos.GetById(auto.Id);
-            autoInDb.Should().Be(auto);
+            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.FinishedWithRollback.ToString());
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer))]
@@ -118,18 +109,12 @@ namespace DistributedTransactions.Tests
 
             public Task CommitAsync(CancellationToken cancellationToken)
             {
-                MockDatabase.Autos.Add(Auto);
-
-                // saving as rollback data
-                RollbackData = Auto.Id;
-
-                return Task.CompletedTask;
+                throw new NotImplementedException();
             }
 
             public Task RollbackAsync(CancellationToken cancellationToken)
             {
-                MockDatabase.Autos.RemoveById(RollbackData);
-                return Task.CompletedTask;
+                throw new NotImplementedException();
             }
         }
     }

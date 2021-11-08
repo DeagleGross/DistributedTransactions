@@ -36,6 +36,12 @@ namespace DistributedTransactions.DAL.Models
         public string RollbackDataType { get; set; }
 
         /// <summary>
+        /// System.Type of a class, that implements IDistributedTransactionOperationExecutor.
+        /// It is needed to use reflection to instantiate and get an object, from which we can invoke rollback method
+        /// </summary>
+        public string ExecutorType { get; set; }
+
+        /// <summary>
         /// rollback_data serialized as a string
         /// </summary>
         public string RollbackData { get; set; }

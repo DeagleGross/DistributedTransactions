@@ -11,16 +11,20 @@ namespace DistributedTransactions.Models
 
         public Type RollbackDataType { get; }
 
-        public int? OperationPriority { get; }
+        public Type ExecutorType { get; }
 
-        public OperationInfo(DistributedTransactionOperationAttribute operationAttribute)
+        public int? RollbackOperationPriority { get; }
+        
+        public OperationInfo(DistributedTransactionOperationAttribute operationAttribute, Type rollbackDataType, Type executorType)
         {
             TransactionType = operationAttribute.TransactionType;
             OperationType = operationAttribute.OperationType;
-            RollbackDataType = operationAttribute.RollbackDataType;
-            OperationPriority = operationAttribute.OperationPriority;
+            RollbackOperationPriority = operationAttribute.OperationPriority;
+
+            RollbackDataType = rollbackDataType;
+            ExecutorType = executorType;
         }
 
-        public override string ToString() => $"OperationInfo: OperationType='{OperationType}', TransactionType='{TransactionType}', OperationPriority='{OperationPriority}'";
+        public override string ToString() => $"OperationInfo: OperationType='{OperationType}', TransactionType='{TransactionType}', RollbackOperationPriority='{RollbackOperationPriority}'";
     }
 }
