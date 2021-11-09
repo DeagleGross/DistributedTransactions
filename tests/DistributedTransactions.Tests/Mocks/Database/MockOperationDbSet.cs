@@ -30,7 +30,7 @@ namespace DistributedTransactions.Tests.Mocks.Database
 
         public void Add(OperationEntity item)
         {
-            item.Id = _items.Count;
+            item.Id = _items.Count + 1;
             _items.Add(item);
         }
 

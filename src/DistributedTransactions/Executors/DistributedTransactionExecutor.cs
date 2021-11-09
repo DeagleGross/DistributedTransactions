@@ -33,7 +33,7 @@ namespace DistributedTransactions.Executors
         /// Registers operation in a transaction. Sensitive to order of registering - operations are executed in order of addition.
         /// </summary>
         /// <param name="operation">OperationExecutor with [DistributedTransactionExecutor] attribute to register in a transaction</param>
-        public void RegisterOperation<T>(IDistributedTransactionOperation<T> operation)
+        public void RegisterOperation<T>(DistributedTransactionOperationBase<T> operation)
         {
             var operationInfo = InstanceInfoRetriever.GetOperationInfo(operation);
 
@@ -47,6 +47,15 @@ namespace DistributedTransactions.Executors
             }
 
             var operationWrapper = new OperationExecutorWithInfo(OperationConverter.ToObjectInstanceOperation(operation), operationInfo);
+
+            operation.PropertyChanged += (sender, _) =>
+            {
+                if (sender is null) throw new ArgumentNullException($"operation object passed when registering operation is null...");
+
+                var distributedOperationBaseRollbackDataPropertyName = nameof(DistributedTransactionOperationBase<object>.RollbackData);
+                var genericOperationRollbackData = sender.GetType().GetProperty(distributedOperationBaseRollbackDataPropertyName)!.GetValue(sender, null);
+                operationWrapper.OperationExecutor.RollbackData = genericOperationRollbackData;
+            };
 
             _distributedTransactionOperationWrappers.AddLast(operationWrapper);
         }
@@ -98,7 +107,7 @@ namespace DistributedTransactions.Executors
                     await TransactionProvider.UpdateTransactionStatus(_transaction.Id, TransactionStatus.NeedsToRollback, cancellationToken);
                     await OperationProvider.UpdateOperationsStatus(_operations.Select(x => x.Id), OperationStatus.NeedsToRollback, cancellationToken);
 
-                    await RollbackTransaction(cancellationToken);
+                    await RollbackTransaction(_transaction.Id, cancellationToken);
                     return;
                 }
 
@@ -112,16 +121,36 @@ namespace DistributedTransactions.Executors
             Logger.LogInformation($"Successfully finished transaction #{_transaction.Id}");
         }
 
-        public async Task RollbackTransaction(CancellationToken cancellationToken)
+        public async Task RollbackTransaction(long transactionId, CancellationToken cancellationToken)
         {
-            var operationsToRollback = await OperationProvider.GetByTransactionIdAndStatusAsync(_transaction.Id, OperationStatus.NeedsToRollback, cancellationToken);
+            var operationsToRollback = await OperationProvider.GetByTransactionIdAndStatusAsync(transactionId, OperationStatus.NeedsToRollback, cancellationToken);
+
+            // ReSharper disable once PossibleMultipleEnumeration
+            if (operationsToRollback.IsNullOrEmpty())
+            {
+                Logger.LogWarning($"No operations to rollback found for transaction");
+                return;
+            }
+
             foreach (var operation in operationsToRollback)
             {
                 // we need to create an instance of an IDistributedTransactionOperation, so that we can invoke Rollback method
-                var operationExecutor = TypeHelper.GetOperationExecutor(operation.ExecutorType, operation.RollbackDataType);
-                operationExecutor = TypeHelper.LoadRollbackDataIntoInstance(operationExecutor, operation.ExecutorType, operation.RollbackDataType, operation.RollbackData);
-                Console.Write(operationExecutor);
+                var operationExecutor = TypeHelper.GetOperationExecutor(operation.ExecutorType, operation.RollbackDataType, operation.RollbackData);
+
+                if (await TryRollbackOperationAsync(operationExecutor, operation, cancellationToken))
+                {
+                    await OperationProvider.UpdateOperationStatus(operation.Id, OperationStatus.Rollbacked, cancellationToken);
+                    Logger.LogInformation($"Rollbacked \"{operation}\" successfully.");
+                }
+                else
+                {
+                    Logger.LogError($"Failed to rollback one of the operations during transaction(#id={transactionId}). Stopping the whole rollback process.");
+                    return;
+                }
             }
+
+            Logger.LogInformation($"Successfully rollbacked all of the operations for transaction {transactionId}. Saving transaction as {TransactionStatus.FinishedWithRollback}");
+            await TransactionProvider.UpdateTransactionStatus(transactionId, TransactionStatus.FinishedWithRollback, cancellationToken);
         }
 
         private async Task<bool> TryCommitOperationAsync(OperationExecutorWithInfo operationExecutorWithInfo, CancellationToken cancellationToken)
@@ -141,9 +170,18 @@ namespace DistributedTransactions.Executors
             }
         }
 
-        private async Task<bool> TryRollbackOperationAsync(OperationExecutorWithInfo operationExecutorWithInfo, CancellationToken cancellationToken)
+        private async Task<bool> TryRollbackOperationAsync(IDistributedTransactionOperationExecutor operationExecutor, Operation operation, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            try
+            {
+                await operationExecutor.RollbackAsync(cancellationToken);
+                return true;
+            }
+            catch
+            {
+                Logger.LogError($"Failed while '{nameof(operationExecutor.RollbackAsync)}' execution of operation \"{operation}\"");
+                return false;
+            }
         }
     }
 }

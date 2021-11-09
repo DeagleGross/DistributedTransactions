@@ -1,4 +1,5 @@
 ﻿using System;
+using DistributedTransactions.Exceptions;
 using DistributedTransactions.Models.Abstractions;
 
 namespace DistributedTransactions.Reflection
@@ -10,12 +11,15 @@ namespace DistributedTransactions.Reflection
             return typeof(T);
         }
 
-        public static IDistributedTransactionOperationExecutor GetOperationExecutor(Type executorType, Type rollbackType)
+        public static IDistributedTransactionOperationExecutor GetOperationExecutor(Type executorType, Type rollbackType, object rollbackData)
         {
             var genericDistributedTransactionOperationType = typeof(IDistributedTransactionOperation<>);
             var instance = Activator.CreateInstance(executorType);
 
-            // TODO don't forget to load rollback data to an instance here
+            var rollbackDataProperty = executorType.GetProperty(nameof(IDistributedTransactionOperation.RollbackData));
+            if (rollbackDataProperty is null) throw new RollbackDataPropertyNotFoundException(executorType, rollbackType);
+            rollbackDataProperty.SetValue(instance, rollbackData);
+
             return instance as IDistributedTransactionOperationExecutor;
         }
 

@@ -73,15 +73,13 @@ namespace DistributedTransactions.Tests
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer))]
-        internal class CreateManufacturer : IDistributedTransactionOperation<long>
+        internal class CreateManufacturer : DistributedTransactionOperationBase<long>
         {
             public Manufacturer Manufacturer { get; set; }
 
             public MockDatabase MockDatabase { get; set; }
 
-            public long RollbackData { get; set; }
-
-            public Task CommitAsync(CancellationToken cancellationToken)
+            public override Task CommitAsync(CancellationToken cancellationToken)
             {
                 MockDatabase.Manufacturers.Add(Manufacturer);
                 
@@ -91,7 +89,7 @@ namespace DistributedTransactions.Tests
                 return Task.CompletedTask;
             }
 
-            public Task RollbackAsync(CancellationToken cancellationToken)
+            public override Task RollbackAsync(CancellationToken cancellationToken)
             {
                 MockDatabase.Manufacturers.RemoveById(RollbackData);
                 return Task.CompletedTask;
@@ -99,20 +97,18 @@ namespace DistributedTransactions.Tests
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateAuto))]
-        internal class CreateAuto : IDistributedTransactionOperation<long>
+        internal class CreateAuto : DistributedTransactionOperationBase<long>
         {
             public Auto Auto { get; set; }
 
             public MockDatabase MockDatabase { get; set; }
 
-            public long RollbackData { get; set; }
-
-            public Task CommitAsync(CancellationToken cancellationToken)
+            public override Task CommitAsync(CancellationToken cancellationToken)
             {
                 throw new NotImplementedException();
             }
 
-            public Task RollbackAsync(CancellationToken cancellationToken)
+            public override Task RollbackAsync(CancellationToken cancellationToken)
             {
                 throw new NotImplementedException();
             }

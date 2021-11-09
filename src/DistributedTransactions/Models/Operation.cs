@@ -19,5 +19,7 @@ namespace DistributedTransactions.Models
         public object RollbackData { get; set; }
 
         public OperationStatus Status { get; set; }
+
+        public override string ToString() => $"Operation: Id={Id}, TransactionId={TransactionId}, OperationType={OperationType}";
     }
 }
