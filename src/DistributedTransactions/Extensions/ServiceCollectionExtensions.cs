@@ -10,6 +10,8 @@ namespace DistributedTransactions.Extensions
         {
             services.AddScoped<IOperationProvider, OperationProvider>();
             services.AddScoped<ITransactionProvider, TransactionProvider>();
+
+            services.AddScoped<ITransactionContext, ServiceTransactionContext>();
         }
     }
 }

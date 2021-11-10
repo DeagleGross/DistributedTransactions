@@ -3,21 +3,23 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using DistributedTransactions.Annotations;
+using DistributedTransactions.Providers.Abstractions;
 
 namespace DistributedTransactions.Models.Abstractions
 {
-    public abstract class DistributedTransactionOperationBase<T> : IDistributedTransactionOperation<T>, INotifyPropertyChanged
+    public abstract class DistributedTransactionOperationBase<TRollbackData> : IDistributedTransactionOperation<TRollbackData>, INotifyPropertyChanged
     {
-        private T _rollbackData;
+        private TRollbackData _rollbackData;
 
-        public T RollbackData
+        public TRollbackData RollbackData
         {
             get => _rollbackData;
             set => SetField(ref _rollbackData, value);
         }
 
-        public DistributedTransactionOperationBase(){}
+        protected DistributedTransactionOperationBase(ITransactionContext transactionContext)
+        {
+        }
 
         public abstract Task CommitAsync(CancellationToken cancellationToken);
 

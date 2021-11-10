@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
 using DistributedTransactions.Builders;
 using DistributedTransactions.Executors;
+using DistributedTransactions.Models;
 using DistributedTransactions.Models.Abstractions;
 using DistributedTransactions.Providers.Abstractions;
 using DistributedTransactions.Tests.Base;
@@ -12,12 +13,13 @@ using DistributedTransactions.Tests.Mocks;
 using DistributedTransactions.Tests.Mocks.Database;
 using DistributedTransactions.Tests.Mocks.Models;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace DistributedTransactions.Tests
 {
     [TestFixture]
-    internal class DistributedTransactionsRollbackFlowTests : DistributedTransactionsTestsBase
+    internal class DistributedTransactionInvalidsRollbackFlowTests : DistributedTransactionsTestsBase
     {
         private MockDatabase _mockDatabase;
 
@@ -29,7 +31,7 @@ namespace DistributedTransactions.Tests
         }
 
         [Test]
-        public async Task CreateManufacturer_CreateAutosWithFail_SuccessfullyRollbacks()
+        public async Task CreateManufacturer_CreateAutosWithFail_InvalidRollbacksDefined_SavesStateCorrectly()
         {
             var manufacturer = new Manufacturer
             {
@@ -65,11 +67,11 @@ namespace DistributedTransactions.Tests
 
             await distributedTransactionExecutor.ExecuteFullTransactionAsync(CancellationToken.None);
 
-            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.FinishedWithRollback.ToString());
-            _mockDatabase.Operations.First().Status.Should().Be(OperationStatus.Rollbacked.ToString());
+            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.NeedsToRollback.ToString());
+            _mockDatabase.Operations.First().Status.Should().Be(OperationStatus.NeedsToRollback.ToString());
 
+            _mockDatabase.Manufacturers.Should().NotBeEmpty();
             _mockDatabase.Autos.Should().BeEmpty();
-            _mockDatabase.Manufacturers.Should().BeEmpty();
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer))]
@@ -96,8 +98,7 @@ namespace DistributedTransactions.Tests
 
             public override Task RollbackAsync(CancellationToken cancellationToken)
             {
-                _mockDatabase.Manufacturers.RemoveById(RollbackData);
-                return Task.CompletedTask;
+                throw new NotImplementedException();
             }
         }
 

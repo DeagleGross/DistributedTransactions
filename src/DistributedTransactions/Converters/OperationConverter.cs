@@ -15,6 +15,7 @@ namespace DistributedTransactions.Converters
             OperationType = operation.OperationType,
             ExecutorType = operation.ExecutorType.AssemblyQualifiedName,
             RollbackOperationPriority = operation.RollbackOperationPriority,
+            // rollback_data
             RollbackDataType = operation.RollbackDataType.AssemblyQualifiedName,
             RollbackData = operation.RollbackData.Serialize(operation.RollbackDataType),
             Status = operation.Status.ToString()
@@ -32,13 +33,14 @@ namespace DistributedTransactions.Converters
                 OperationType = entity.OperationType,
                 RollbackOperationPriority = entity.RollbackOperationPriority,
                 ExecutorType = executorType,
+                // rollback_data
                 RollbackDataType = rollbackDataType,
                 RollbackData = entity.RollbackData.Deserialize(rollbackDataType),
                 Status = Enum.Parse<OperationStatus>(entity.Status)
             };
         }
 
-        public static IDistributedTransactionOperation ToObjectInstanceOperation<T>(IDistributedTransactionOperation<T> genericOperation)
+        public static IDistributedTransactionOperation ToObjectOrientedOperation<TRollbackData>(IDistributedTransactionOperation<TRollbackData> genericOperation)
         {
             return new DistributedTransactionOperation(genericOperation, genericOperation.RollbackData);
         }

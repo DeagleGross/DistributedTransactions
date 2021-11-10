@@ -1,7 +1,7 @@
 ﻿namespace DistributedTransactions.Models.Abstractions
 {
-    public interface IDistributedTransactionOperation<T> : IDistributedTransactionOperationExecutor
+    public interface IDistributedTransactionOperation<TRollbackData> : IDistributedTransactionOperationExecutor
     {
-        T RollbackData { get; set; }
+        TRollbackData RollbackData { get; set; }
     }
 }

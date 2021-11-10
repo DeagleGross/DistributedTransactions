@@ -18,6 +18,7 @@ namespace DistributedTransactions.Executors
     {
         private readonly LinkedList<OperationExecutorWithInfo> _distributedTransactionOperationWrappers = new();
 
+        private readonly ITransactionContext _transactionContext;
         private Transaction _transaction;
         private readonly IList<Operation> _operations = new List<Operation>();
 
@@ -29,11 +30,16 @@ namespace DistributedTransactions.Executors
 
         internal string TransactionType { get; set; }
 
+        internal DistributedTransactionExecutor(ITransactionContext transactionContext)
+        {
+            _transactionContext = transactionContext;
+        }
+
         /// <summary>
         /// Registers operation in a transaction. Sensitive to order of registering - operations are executed in order of addition.
         /// </summary>
         /// <param name="operation">OperationExecutor with [DistributedTransactionExecutor] attribute to register in a transaction</param>
-        public void RegisterOperation<T>(DistributedTransactionOperationBase<T> operation)
+        public void RegisterOperation<TRollbackData>(DistributedTransactionOperationBase<TRollbackData> operation)
         {
             var operationInfo = InstanceInfoRetriever.GetOperationInfo(operation);
 
@@ -46,15 +52,19 @@ namespace DistributedTransactions.Executors
                 throw new DifferentTransactionTypeValuesLoadedException(TransactionType, operationInfo.TransactionType);
             }
 
-            var operationWrapper = new OperationExecutorWithInfo(OperationConverter.ToObjectInstanceOperation(operation), operationInfo);
+            var operationWrapper = new OperationExecutorWithInfo(OperationConverter.ToObjectOrientedOperation(operation), operationInfo);
 
-            operation.PropertyChanged += (sender, _) =>
+            operation.PropertyChanged += (sender, args) =>
             {
                 if (sender is null) throw new ArgumentNullException($"operation object passed when registering operation is null...");
 
-                var distributedOperationBaseRollbackDataPropertyName = nameof(DistributedTransactionOperationBase<object>.RollbackData);
-                var genericOperationRollbackData = sender.GetType().GetProperty(distributedOperationBaseRollbackDataPropertyName)!.GetValue(sender, null);
-                operationWrapper.OperationExecutor.RollbackData = genericOperationRollbackData;
+                var rollbackDataPropertyName = nameof(DistributedTransactionOperationBase<object>.RollbackData);
+                if (args.PropertyName == rollbackDataPropertyName)
+                {
+                    var genericOperationRollbackData = sender.GetType().GetProperty(rollbackDataPropertyName)!.GetValue(sender, null);
+                    operationWrapper.OperationExecutor.RollbackData = genericOperationRollbackData;
+                    return;
+                }
             };
 
             _distributedTransactionOperationWrappers.AddLast(operationWrapper);
@@ -89,6 +99,7 @@ namespace DistributedTransactions.Executors
                         OperationType = operationInfo.OperationType,
                         RollbackOperationPriority = operationInfo.RollbackOperationPriority,
                         ExecutorType = operationInfo.ExecutorType,
+                        // rollback_data
                         RollbackDataType = operationInfo.RollbackDataType,
                         RollbackData = operation.RollbackData
                     }, cancellationToken);
@@ -135,7 +146,7 @@ namespace DistributedTransactions.Executors
             foreach (var operation in operationsToRollback)
             {
                 // we need to create an instance of an IDistributedTransactionOperation, so that we can invoke Rollback method
-                var operationExecutor = TypeHelper.GetOperationExecutor(operation.ExecutorType, operation.RollbackDataType, operation.RollbackData);
+                var operationExecutor = TypeHelper.GetOperationExecutorWithFilledData(operation, _transactionContext);
 
                 if (await TryRollbackOperationAsync(operationExecutor, operation, cancellationToken))
                 {

@@ -1,16 +1,18 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
 using DistributedTransactions.Builders;
 using DistributedTransactions.Executors;
-using DistributedTransactions.Models;
 using DistributedTransactions.Models.Abstractions;
+using DistributedTransactions.Providers.Abstractions;
 using DistributedTransactions.Tests.Base;
 using DistributedTransactions.Tests.Mocks;
 using DistributedTransactions.Tests.Mocks.Database;
 using DistributedTransactions.Tests.Mocks.Models;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace DistributedTransactions.Tests
@@ -44,22 +46,20 @@ namespace DistributedTransactions.Tests
             };
 
             var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
-                .CreateDistributedTransactionExecutor()
+                .CreateDistributedTransactionExecutor(TransactionContext)
                 .UseLogger(GetLogger<DistributedTransactionExecutor>())
                 .UseTransactionProvider(TransactionProvider)
                 .UseOperationProvider(OperationProvider);
 
-            var createManufacturer = new CreateManufacturer
+            var createManufacturer = new CreateManufacturer(TransactionContext)
             {
-                MockDatabase = _mockDatabase,
                 Manufacturer = manufacturer
             };
 
-            var createAuto = new CreateAuto
+            var createAuto = new CreateAuto(TransactionContext)
             {
-                MockDatabase = _mockDatabase,
                 Auto = auto
-            };
+            };         
 
             distributedTransactionExecutor.RegisterOperation(createManufacturer);
             distributedTransactionExecutor.RegisterOperation(createAuto);
@@ -86,11 +86,16 @@ namespace DistributedTransactions.Tests
         {
             public Manufacturer Manufacturer { get; set; }
 
-            public MockDatabase MockDatabase { get; set; }
+            private readonly MockDatabase _mockDatabase;
+
+            public CreateManufacturer(ITransactionContext transactionContext) : base(transactionContext)
+            {
+                _mockDatabase = transactionContext.GetRequiredService<MockDatabase>();
+            }
 
             public override Task CommitAsync(CancellationToken cancellationToken)
             {
-                MockDatabase.Manufacturers.Add(Manufacturer);
+                _mockDatabase.Manufacturers.Add(Manufacturer);
                 
                 // saving as rollback data
                 RollbackData = Manufacturer.Id;
@@ -100,7 +105,7 @@ namespace DistributedTransactions.Tests
 
             public override Task RollbackAsync(CancellationToken cancellationToken)
             {
-                MockDatabase.Manufacturers.RemoveById(RollbackData);
+                _mockDatabase.Manufacturers.RemoveById(RollbackData);
                 return Task.CompletedTask;
             }
         }
@@ -110,11 +115,16 @@ namespace DistributedTransactions.Tests
         {
             public Auto Auto { get; set; }
 
-            public MockDatabase MockDatabase { get; set; }
+            private readonly MockDatabase _mockDatabase;
+
+            public CreateAuto(ITransactionContext transactionContext) : base(transactionContext)
+            {
+                _mockDatabase = transactionContext.GetRequiredService<MockDatabase>();
+            }
 
             public override Task CommitAsync(CancellationToken cancellationToken)
             {
-                MockDatabase.Autos.Add(Auto);
+                _mockDatabase.Autos.Add(Auto);
 
                 // saving as rollback data
                 RollbackData = Auto.Id;
@@ -124,7 +134,7 @@ namespace DistributedTransactions.Tests
 
             public override Task RollbackAsync(CancellationToken cancellationToken)
             {
-                MockDatabase.Autos.RemoveById(RollbackData);
+                _mockDatabase.Autos.RemoveById(RollbackData);
                 return Task.CompletedTask;
             }
         }

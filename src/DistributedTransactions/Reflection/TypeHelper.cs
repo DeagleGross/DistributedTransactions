@@ -1,24 +1,25 @@
 ﻿using System;
 using DistributedTransactions.Exceptions;
+using DistributedTransactions.Models;
 using DistributedTransactions.Models.Abstractions;
+using DistributedTransactions.Providers.Abstractions;
 
 namespace DistributedTransactions.Reflection
 {
     internal static class TypeHelper
     {
-        public static Type GetTypeFromDistributedTransactionOperation<T>(IDistributedTransactionOperation<T> operation)
+        public static Type GetTypeFromDistributedTransactionOperation<TRollbackData>(IDistributedTransactionOperation<TRollbackData> _)
         {
-            return typeof(T);
+            return typeof(TRollbackData);
         }
 
-        public static IDistributedTransactionOperationExecutor GetOperationExecutor(Type executorType, Type rollbackType, object rollbackData)
+        public static IDistributedTransactionOperationExecutor GetOperationExecutorWithFilledData(Operation operation, ITransactionContext transactionContext)
         {
-            var genericDistributedTransactionOperationType = typeof(IDistributedTransactionOperation<>);
-            var instance = Activator.CreateInstance(executorType);
+            var instance = Activator.CreateInstance(operation.ExecutorType, transactionContext);
 
-            var rollbackDataProperty = executorType.GetProperty(nameof(IDistributedTransactionOperation.RollbackData));
-            if (rollbackDataProperty is null) throw new RollbackDataPropertyNotFoundException(executorType, rollbackType);
-            rollbackDataProperty.SetValue(instance, rollbackData);
+            var rollbackDataProperty = operation.ExecutorType.GetProperty(nameof(IDistributedTransactionOperation.RollbackData));
+            if (rollbackDataProperty is null) throw new RollbackDataPropertyNotFoundException(operation.ExecutorType, operation.RollbackDataType);
+            rollbackDataProperty.SetValue(instance, operation.RollbackData);
 
             return instance as IDistributedTransactionOperationExecutor;
         }

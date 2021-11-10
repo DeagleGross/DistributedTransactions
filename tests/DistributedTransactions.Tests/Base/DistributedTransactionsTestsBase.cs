@@ -1,4 +1,5 @@
-﻿using DistributedTransactions.DAL.Abstractions;
+﻿using System;
+using DistributedTransactions.DAL.Abstractions;
 using DistributedTransactions.Extensions;
 using DistributedTransactions.Providers.Abstractions;
 using DistributedTransactions.Tests.Mocks;
@@ -15,23 +16,25 @@ namespace DistributedTransactions.Tests.Base
     [SetUpFixture]
     internal abstract class DistributedTransactionsTestsBase
     {
-        private ServiceProvider _serviceProvider;
+        protected ServiceProvider ServiceProvider;
 
-        protected IOperationProvider OperationProvider => _serviceProvider.GetRequiredService<IOperationProvider>();
-        protected ITransactionProvider TransactionProvider => _serviceProvider.GetRequiredService<ITransactionProvider>();
+        protected IOperationProvider OperationProvider => ServiceProvider.GetRequiredService<IOperationProvider>();
+        protected ITransactionProvider TransactionProvider => ServiceProvider.GetRequiredService<ITransactionProvider>();
         
-        protected IOperationRepository OperationRepository => _serviceProvider.GetRequiredService<IOperationRepository>();
+        protected IOperationRepository OperationRepository => ServiceProvider.GetRequiredService<IOperationRepository>();
         
-        protected ITransactionRepository TransactionRepository => _serviceProvider.GetRequiredService<ITransactionRepository>();
+        protected ITransactionRepository TransactionRepository => ServiceProvider.GetRequiredService<ITransactionRepository>();
 
-        protected MockDatabase MockDatabase => _serviceProvider.GetRequiredService<MockDatabase>();
+        protected MockDatabase MockDatabase => ServiceProvider.GetRequiredService<MockDatabase>();
 
-        protected ILogger<T> GetLogger<T>() => _serviceProvider.GetRequiredService<ILogger<T>>();
+        protected ITransactionContext TransactionContext => ServiceProvider.GetRequiredService<ITransactionContext>();
+
+        protected ILogger<T> GetLogger<T>() => ServiceProvider.GetRequiredService<ILogger<T>>();
 
         [OneTimeSetUp]
         protected void OneTimeSetup()
         {
-            _serviceProvider = SetupServiceProvider();
+            ServiceProvider = SetupServiceProvider();
         }
 
         private ServiceProvider SetupServiceProvider()

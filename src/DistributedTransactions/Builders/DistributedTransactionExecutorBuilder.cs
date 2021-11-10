@@ -6,9 +6,9 @@ namespace DistributedTransactions.Builders
 {
     public static class DistributedTransactionExecutorBuilder
     {
-        public static DistributedTransactionExecutor CreateDistributedTransactionExecutor()
+        public static DistributedTransactionExecutor CreateDistributedTransactionExecutor(ITransactionContext transactionContext)
         {
-            return new DistributedTransactionExecutor();
+            return new DistributedTransactionExecutor(transactionContext);
         }
 
         public static DistributedTransactionExecutor UseLogger(this DistributedTransactionExecutor transactionExecutor, ILogger<DistributedTransactionExecutor> executorLogger)
