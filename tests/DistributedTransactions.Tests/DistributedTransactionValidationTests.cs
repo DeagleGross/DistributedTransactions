@@ -32,7 +32,7 @@ namespace DistributedTransactions.Tests
         }
 
         [Test]
-        public async Task RegisterOperation_ThrowsDifferentTransactionTypesPassed()
+        public Task RegisterOperation_ThrowsDifferentTransactionTypesPassed()
         {
             var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
                 .CreateDistributedTransactionExecutor(TransactionContext)
@@ -50,10 +50,11 @@ namespace DistributedTransactions.Tests
             });
 
             registerOperationsAction.Should().Throw<DifferentTransactionTypeValuesLoadedException>();
+            return Task.CompletedTask;
         }
 
         [Test]
-        public async Task ExecuteFullTransaction_ThrowsNoOperationsRegistered()
+        public Task ExecuteFullTransaction_ThrowsNoOperationsRegistered()
         {
             var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
                 .CreateDistributedTransactionExecutor(TransactionContext)
@@ -67,6 +68,7 @@ namespace DistributedTransactions.Tests
             });
 
             registerOperationsAction.Should().Throw<NoTransactionOperationsRegisteredException>();
+            return Task.CompletedTask;
         }
 
         [DistributedTransactionOperation("random_type_1", nameof(OperationType.CreateManufacturer))]
