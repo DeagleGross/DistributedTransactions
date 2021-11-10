@@ -10,7 +10,7 @@ namespace DistributedTransactions.Attributes
             var instanceType = instance.GetType();
             var attribute = Attribute.GetCustomAttribute(instanceType, typeof(T)) as T;
 
-            if (attribute is null) throw DistributedTransactionOperationInfoNotFound.Create(instanceType);
+            if (attribute is null) throw new DistributedTransactionOperationInfoNotFound(instanceType);
 
             return attribute;
         }

@@ -3,7 +3,7 @@ using DistributedTransactions.Attributes;
 
 namespace DistributedTransactions.Models
 {
-    public record OperationInfo
+    internal record OperationInfo
     {
         public string TransactionType { get; }
 

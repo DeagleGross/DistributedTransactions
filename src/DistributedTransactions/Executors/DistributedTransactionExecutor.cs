@@ -18,9 +18,10 @@ namespace DistributedTransactions.Executors
     {
         private readonly LinkedList<OperationExecutorWithInfo> _distributedTransactionOperationWrappers = new();
 
-        private readonly ITransactionContext _transactionContext;
         private Transaction _transaction;
         private readonly IList<Operation> _operations = new List<Operation>();
+
+        private readonly ITransactionContext _transactionContext;
 
         internal ILogger<DistributedTransactionExecutor> Logger { get; set; }
 
@@ -43,6 +44,7 @@ namespace DistributedTransactions.Executors
         {
             var operationInfo = InstanceInfoRetriever.GetOperationInfo(operation);
 
+            // maintaining single transaction_type not to mess up during the transaction_execution process
             if (TransactionType is null)
             {
                 TransactionType = operationInfo.TransactionType;
@@ -54,6 +56,7 @@ namespace DistributedTransactions.Executors
 
             var operationWrapper = new OperationExecutorWithInfo(OperationConverter.ToObjectOrientedOperation(operation), operationInfo);
 
+            // handy approach to bind rollbackData of user-defined operation.rollbackData of `T` type to internal operation.rollbackData of `object` type.
             operation.PropertyChanged += (sender, args) =>
             {
                 if (sender is null) throw new ArgumentNullException($"operation object passed when registering operation is null...");
@@ -63,7 +66,6 @@ namespace DistributedTransactions.Executors
                 {
                     var genericOperationRollbackData = sender.GetType().GetProperty(rollbackDataPropertyName)!.GetValue(sender, null);
                     operationWrapper.OperationExecutor.RollbackData = genericOperationRollbackData;
-                    return;
                 }
             };
 
@@ -99,7 +101,6 @@ namespace DistributedTransactions.Executors
                         OperationType = operationInfo.OperationType,
                         RollbackOperationPriority = operationInfo.RollbackOperationPriority,
                         ExecutorType = operationInfo.ExecutorType,
-                        // rollback_data
                         RollbackDataType = operationInfo.RollbackDataType,
                         RollbackData = operation.RollbackData
                     }, cancellationToken);
@@ -110,8 +111,7 @@ namespace DistributedTransactions.Executors
                 else
                 {
                     // failed to commit operation, so we need to rollback all operations, that were committed before
-                    Logger.LogError(
-                        $"Failed to commit operation in a transaction #{_transaction.Id}. Starting rollback process.");
+                    Logger.LogError($"Failed to commit operation in a transaction #{_transaction.Id}. Starting rollback process.");
 
                     // firstly we need to mark transaction with new status - `NeedsToBeRollback-ed`
                     // and also all of operations just in case we could not rollback and we could get back to that job later
@@ -134,9 +134,8 @@ namespace DistributedTransactions.Executors
 
         public async Task RollbackTransaction(long transactionId, CancellationToken cancellationToken)
         {
-            var operationsToRollback = await OperationProvider.GetByTransactionIdAndStatusAsync(transactionId, OperationStatus.NeedsToRollback, cancellationToken);
-
-            // ReSharper disable once PossibleMultipleEnumeration
+            var operationsToRollback = (await OperationProvider.GetByTransactionIdAndStatusAsync(transactionId, OperationStatus.NeedsToRollback, cancellationToken)).ToArray();
+            
             if (operationsToRollback.IsNullOrEmpty())
             {
                 Logger.LogWarning($"No operations to rollback found for transaction");

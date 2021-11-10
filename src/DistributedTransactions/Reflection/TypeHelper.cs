@@ -23,11 +23,5 @@ namespace DistributedTransactions.Reflection
 
             return instance as IDistributedTransactionOperationExecutor;
         }
-
-        private static Type[] GetGenericTypeArgumentsFromInstanceImplementedInterfaces(Type objectType, Type interfaceType)
-        {
-            var specificInterface = objectType.GetInterface(interfaceType.Name);
-            return specificInterface?.GenericTypeArguments;
-        }
     }
 }
