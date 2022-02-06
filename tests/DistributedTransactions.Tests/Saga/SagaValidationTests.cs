@@ -1,53 +1,43 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
-using DistributedTransactions.Builders;
 using DistributedTransactions.Exceptions;
-using DistributedTransactions.Executors;
-using DistributedTransactions.Models.Abstractions;
 using DistributedTransactions.Providers.Abstractions;
+using DistributedTransactions.Saga.Models.Abstractions;
 using DistributedTransactions.Tests.Base;
 using DistributedTransactions.Tests.Mocks;
-using DistributedTransactions.Tests.Mocks.Database;
 using DistributedTransactions.Tests.Mocks.Models;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace DistributedTransactions.Tests
+namespace DistributedTransactions.Tests.Saga
 {
     [TestFixture]
-    internal class DistributedTransactionValidationTests : DistributedTransactionsTestsBase
+    internal class SagaValidationTests : DistributedTransactionsTestsBase
     {
-        private MockDatabase _mockDatabase;
-
-        [SetUp]
-        public void Setup()
+        [OneTimeSetUp]
+        public void SetupServiceProvider()
         {
-            _mockDatabase = MockDatabase;
-            _mockDatabase.ClearAll();
+            OneTimeSetup();
         }
 
         [Test]
         public Task RegisterOperation_ThrowsDifferentTransactionTypesPassed()
         {
-            var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
-                .CreateDistributedTransactionExecutor(TransactionContext)
-                .UseLogger(GetLogger<DistributedTransactionExecutor>())
-                .UseTransactionProvider(TransactionProvider)
-                .UseOperationProvider(OperationProvider);
+            var sagaExecutor = SagaExecutorBuilder.ValidateAndBuild();
 
             var createManufacturer = new CreateManufacturer(TransactionContext);
             var createAuto = new CreateAuto(TransactionContext);
 
             var registerOperationsAction = new Action(() =>
             {
-                distributedTransactionExecutor.RegisterOperation(createManufacturer);
-                distributedTransactionExecutor.RegisterOperation(createAuto);
+                sagaExecutor.RegisterOperation(createManufacturer);
+                sagaExecutor.RegisterOperation(createAuto);
             });
+
+            sagaExecutor.TransactionId.Should().Be(null);
+            sagaExecutor.Status.Should().Be(null);
 
             registerOperationsAction.Should().Throw<DifferentTransactionTypeValuesLoadedException>();
             return Task.CompletedTask;
@@ -56,23 +46,22 @@ namespace DistributedTransactions.Tests
         [Test]
         public Task ExecuteFullTransaction_ThrowsNoOperationsRegistered()
         {
-            var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
-                .CreateDistributedTransactionExecutor(TransactionContext)
-                .UseLogger(GetLogger<DistributedTransactionExecutor>())
-                .UseTransactionProvider(TransactionProvider)
-                .UseOperationProvider(OperationProvider);
+            var sagaExecutor = SagaExecutorBuilder.ValidateAndBuild();
 
             var registerOperationsAction = new Action(() =>
             {
-                distributedTransactionExecutor.ExecuteFullTransactionAsync(CancellationToken.None).GetAwaiter().GetResult();
+                sagaExecutor.ExecuteTransactionAsync(CancellationToken.None).GetAwaiter().GetResult();
             });
+
+            sagaExecutor.TransactionId.Should().Be(null);
+            sagaExecutor.Status.Should().Be(null);
 
             registerOperationsAction.Should().Throw<NoTransactionOperationsRegisteredException>();
             return Task.CompletedTask;
         }
 
         [DistributedTransactionOperation("random_type_1", nameof(OperationType.CreateManufacturer))]
-        internal class CreateManufacturer : DistributedTransactionOperationBase<long>
+        internal class CreateManufacturer : SagaOperationBase<long>
         {
             public Manufacturer Manufacturer { get; set; }
 
@@ -92,7 +81,7 @@ namespace DistributedTransactions.Tests
         }
 
         [DistributedTransactionOperation("random_type_2", nameof(OperationType.CreateAuto))]
-        internal class CreateAuto : DistributedTransactionOperationBase<long>
+        internal class CreateAuto : SagaOperationBase<long>
         {
             public override Task CommitAsync(CancellationToken cancellationToken)
             {

@@ -1,6 +1,6 @@
 ﻿namespace DistributedTransactions.Tests.Mocks.Models
 {
-    public class Manufacturer : IMockModel
+    public class Manufacturer
     {
         public long Id { get; set; }
 

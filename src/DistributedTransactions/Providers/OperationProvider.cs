@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using DistributedTransactions.DAL.Abstractions;
-using DistributedTransactions.Models;
-using DistributedTransactions.Providers.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Converters;
+using DistributedTransactions.DAL.Abstractions;
+using DistributedTransactions.Metrics.Abstractions;
+using DistributedTransactions.Models;
+using DistributedTransactions.Models.Settings;
+using DistributedTransactions.Providers.Abstractions;
 
 namespace DistributedTransactions.Providers
 {
@@ -13,41 +15,71 @@ namespace DistributedTransactions.Providers
     {
         private readonly IOperationRepository _operationRepository;
 
+        private DistributedTransactionServiceOwnerInfo _distributedTransactionServiceOwnerInfo;
+        private IDistributedTransactionsMetricsSender _distributedTransactionsMetricsSender;
+
         public OperationProvider(IOperationRepository operationRepository)
         {
             _operationRepository = operationRepository;
         }
 
-        public async Task<Operation> GetByOperationIdAsync(long operationId, CancellationToken cancellationToken)
+        DistributedTransactionServiceOwnerInfo IOperationProvider.DistributedTransactionServiceOwnerInfo
         {
-            var operationEntity = await _operationRepository.GetByOperationIdAsync(operationId, cancellationToken);
-            return OperationConverter.FromEntity(operationEntity);
+            get => _distributedTransactionServiceOwnerInfo;
+            set => _distributedTransactionServiceOwnerInfo = value;
         }
 
-        public async Task<IEnumerable<Operation>> GetByTransactionIdAndStatusAsync(long transactionId, OperationStatus operationStatus, CancellationToken cancellationToken)
+        IDistributedTransactionsMetricsSender IOperationProvider.DistributedTransactionsMetricsSender
         {
-            var operationEntities = await _operationRepository.GetByTransactionIdAndStatus(transactionId, operationStatus.ToString(), cancellationToken);
+            get => _distributedTransactionsMetricsSender;
+            set => _distributedTransactionsMetricsSender = value;
+        }
+
+        public async Task<IEnumerable<Operation>> GetByTransactionIdAsync(long transactionId, CancellationToken cancellationToken)
+        {
+            var operationEntities = await _operationRepository.GetByTransactionId(transactionId, cancellationToken);
+            return operationEntities.Select(OperationConverter.FromEntity);
+        }
+
+        public async Task<IEnumerable<Operation>> GetByTransactionIdAndStatusAsync(long transactionId, OperationStatus[] operationStatuses, CancellationToken cancellationToken)
+        {
+            var operationEntities = await _operationRepository.GetByTransactionIdAndStatus(
+                transactionId,
+                operationStatuses.Select(x => x.ToString()).ToArray(),
+                cancellationToken);
+
             return operationEntities.Select(OperationConverter.FromEntity);
         }
 
         public async Task<Operation> CreateAsync(Operation operation, CancellationToken cancellationToken)
         {
-            // if it is created, we can assume to save a new operation with a `created` status
+            // if it is created, we can assume to save a new operation with a `commited` status
             operation.Status = OperationStatus.Committed;
 
             var operationEntity = await _operationRepository.CreateAsync(OperationConverter.ToEntity(operation), cancellationToken);
+            SendStatusChangeTrackingMetric(operation, OperationStatus.Committed);
 
             return OperationConverter.FromEntity(operationEntity);
         }
 
-        public async Task UpdateOperationStatus(long operationId, OperationStatus status, CancellationToken cancellationToken)
+        public async Task UpdateOperationStatus(Operation operation, OperationStatus status, CancellationToken cancellationToken)
         {
-            await _operationRepository.UpdateOperationStatus(operationId, status.ToString(), cancellationToken);
+            await _operationRepository.UpdateOperationStatus(operation.Id, status.ToString(), cancellationToken);
+            SendStatusChangeTrackingMetric(operation, status);
         }
 
-        public async Task UpdateOperationsStatus(IEnumerable<long> operationIds, OperationStatus status, CancellationToken cancellationToken)
+        public async Task UpdateOperationsStatus(ICollection<Operation> operations, OperationStatus status, CancellationToken cancellationToken)
         {
-            await _operationRepository.UpdateOperationsStatus(operationIds, status.ToString(), cancellationToken);
+            await _operationRepository.UpdateOperationsStatuses(operations.Select(x => x.Id), status.ToString(), cancellationToken);
+
+            foreach (var operation in operations)
+                SendStatusChangeTrackingMetric(operation, status);
+        }
+
+        private void SendStatusChangeTrackingMetric(Operation operation, OperationStatus status)
+        {
+            if (_distributedTransactionsMetricsSender is null || _distributedTransactionServiceOwnerInfo is null) return;
+            _distributedTransactionsMetricsSender.RecordOperationStatusChange(_distributedTransactionServiceOwnerInfo, operation, status);
         }
     }
 }

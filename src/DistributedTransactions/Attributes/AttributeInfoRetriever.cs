@@ -5,12 +5,12 @@ namespace DistributedTransactions.Attributes
 {
     internal static class AttributeInfoRetriever
     {
-        public static T GetAttribute<T>(object instance) where T : class
+        public static TAttribute GetAttribute<TAttribute>(object instance)
+            where TAttribute : Attribute
         {
             var instanceType = instance.GetType();
-            var attribute = Attribute.GetCustomAttribute(instanceType, typeof(T)) as T;
-
-            if (attribute is null) throw new DistributedTransactionOperationInfoNotFound(instanceType);
+            var attribute = Attribute.GetCustomAttribute(instanceType, typeof(TAttribute)) as TAttribute;
+            if (attribute is null) throw new AttributeNotFound<TAttribute>(instanceType);
 
             return attribute;
         }

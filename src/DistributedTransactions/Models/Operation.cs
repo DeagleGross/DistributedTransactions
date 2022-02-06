@@ -12,6 +12,8 @@ namespace DistributedTransactions.Models
 
         public int? RollbackOperationPriority { get; set; }
 
+        public int? ExecutionStage { get; set; }
+
         public Type ExecutorType { get; set; }
 
         public Type RollbackDataType { get; set; }

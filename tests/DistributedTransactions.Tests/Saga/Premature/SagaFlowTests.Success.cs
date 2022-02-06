@@ -1,32 +1,38 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
-using DistributedTransactions.Builders;
-using DistributedTransactions.Executors;
-using DistributedTransactions.Models.Abstractions;
 using DistributedTransactions.Providers.Abstractions;
+using DistributedTransactions.Saga.Models.Abstractions;
 using DistributedTransactions.Tests.Base;
 using DistributedTransactions.Tests.Mocks;
-using DistributedTransactions.Tests.Mocks.Database;
 using DistributedTransactions.Tests.Mocks.Models;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace DistributedTransactions.Tests
+namespace DistributedTransactions.Tests.Saga.Premature
 {
     [TestFixture]
-    internal class DistributedTransactionsSuccessFlowTests : DistributedTransactionsTestsBase
+    internal class SagaPrematureFlowTests : DistributedTransactionsTestsBase
     {
+        private ITransactionProvider _transactionProvider;
+        private IOperationProvider _operationProvider;
         private MockDatabase _mockDatabase;
+
+        [OneTimeSetUp]
+        public void SetupServiceProvider()
+        {
+            OneTimeSetup();
+        }
 
         [SetUp]
         public void Setup()
         {
+            _transactionProvider = TransactionProvider;
+            _operationProvider = OperationProvider;
             _mockDatabase = MockDatabase;
-            _mockDatabase.ClearAll();
+
+            _mockDatabase.Clear();
         }
 
         [Test]
@@ -45,11 +51,7 @@ namespace DistributedTransactions.Tests
                 Name = "A7"
             };
 
-            var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
-                .CreateDistributedTransactionExecutor(TransactionContext)
-                .UseLogger(GetLogger<DistributedTransactionExecutor>())
-                .UseTransactionProvider(TransactionProvider)
-                .UseOperationProvider(OperationProvider);
+            var sagaExecutor = SagaExecutorBuilder.ValidateAndBuild();
 
             var createManufacturer = new CreateManufacturer(TransactionContext)
             {
@@ -59,61 +61,73 @@ namespace DistributedTransactions.Tests
             var createAuto = new CreateAuto(TransactionContext)
             {
                 Auto = auto
-            };         
+            };
 
-            distributedTransactionExecutor.RegisterOperation(createManufacturer);
-            distributedTransactionExecutor.RegisterOperation(createAuto);
+            sagaExecutor.RegisterOperation(createManufacturer);
+            sagaExecutor.RegisterOperation(createAuto);
 
-            await distributedTransactionExecutor.ExecuteFullTransactionAsync(CancellationToken.None);
+            await sagaExecutor.ExecuteTransactionAsync(CancellationToken.None);
 
-            _mockDatabase.Transactions.Should().NotBeEmpty();
-            _mockDatabase.Transactions.First().Should().NotBeNull();
-            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.FinishedCorrectly.ToString());
+            // instance status
+            sagaExecutor.Status.Should().Be(TransactionStatus.FinishedPrematurely);
+            sagaExecutor.LastOccuredException.Should().BeNull();
 
-            _mockDatabase.Operations.Should().NotBeEmpty();
-            _mockDatabase.Operations.First().Should().NotBeNull();
-            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.FinishedCorrectly.ToString());
+            // in database entities
+            var transactionId = sagaExecutor.TransactionId!.Value;
+            var transaction = await _transactionProvider.GetByTransactionIdAsync(transactionId, CancellationToken.None);
+            transaction.Status.Should().Be(TransactionStatus.FinishedPrematurely);
 
-            var manufacturerInDb = _mockDatabase.Manufacturers.GetById(manufacturer.Id);
-            manufacturerInDb.Should().Be(manufacturer);
+            var operationEntitiesEnumerable = await _operationProvider.GetByTransactionIdAsync(transactionId, CancellationToken.None);
+            var operationEntities = operationEntitiesEnumerable.ToArray();
+            // only 1 operation has been executed
+            operationEntities.Length.Should().Be(1);
+            operationEntities.First().Status.Should().Be(OperationStatus.Committed);
 
-            var autoInDb = _mockDatabase.Autos.GetById(auto.Id);
-            autoInDb.Should().Be(auto);
+            var manufacturersInDb = _mockDatabase.Manufacturers.Get(x => x.Id == manufacturer.Id);
+            manufacturersInDb.First().Should().Be(manufacturer);
+
+            // because we have prematurely finished transaction
+            _mockDatabase.Autos.Should().BeEmpty();
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer))]
-        internal class CreateManufacturer : DistributedTransactionOperationBase<long>
+        private class CreateManufacturer : SagaOperationBase<long>
         {
-            public Manufacturer Manufacturer { get; set; }
-
             private readonly MockDatabase _mockDatabase;
+            private readonly ITransactionContext _transactionContext;
+
+            public Manufacturer Manufacturer { get; init; }
 
             public CreateManufacturer(ITransactionContext transactionContext) : base(transactionContext)
             {
+                _transactionContext = transactionContext;
                 _mockDatabase = transactionContext.GetRequiredService<MockDatabase>();
             }
 
             public override Task CommitAsync(CancellationToken cancellationToken)
             {
                 _mockDatabase.Manufacturers.Add(Manufacturer);
-                
+
                 // saving as rollback data
                 RollbackData = Manufacturer.Id;
+
+                // calling premature finish of transaction
+                _transactionContext.FinishPrematurely();
 
                 return Task.CompletedTask;
             }
 
             public override Task RollbackAsync(CancellationToken cancellationToken)
             {
-                _mockDatabase.Manufacturers.RemoveById(RollbackData);
+                _mockDatabase.Manufacturers.Remove(x => x.Id == RollbackData);
                 return Task.CompletedTask;
             }
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateAuto))]
-        internal class CreateAuto : DistributedTransactionOperationBase<long>
+        private class CreateAuto : SagaOperationBase<long>
         {
-            public Auto Auto { get; set; }
+            public Auto Auto { get; init; }
 
             private readonly MockDatabase _mockDatabase;
 
@@ -134,7 +148,7 @@ namespace DistributedTransactions.Tests
 
             public override Task RollbackAsync(CancellationToken cancellationToken)
             {
-                _mockDatabase.Autos.RemoveById(RollbackData);
+                _mockDatabase.Autos.Remove(x => x.Id == RollbackData);
                 return Task.CompletedTask;
             }
         }

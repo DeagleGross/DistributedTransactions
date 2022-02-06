@@ -1,15 +1,14 @@
-﻿using System;
+﻿using DistributedTransactions.DAL.Abstractions;
+using DistributedTransactions.DAL.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using DistributedTransactions.DAL.Abstractions;
-using DistributedTransactions.DAL.Models;
-using DistributedTransactions.Tests.Mocks.Database;
 
 namespace DistributedTransactions.Tests.Mocks
 {
-    public class OperationRepository : IOperationRepository
+    internal class OperationRepository : IOperationRepository
     {
         private readonly MockDatabase _mockDatabase;
 
@@ -52,6 +51,27 @@ namespace DistributedTransactions.Tests.Mocks
         {
             foreach (var operation in _mockDatabase.Operations.Where(x => operationIds.Contains(x.Id)))
             {
+                operation.Status = status;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task<IEnumerable<OperationEntity>> GetByTransactionIdAndStatus(long transactionId, string[] operationStatuses, CancellationToken cancellationToken)
+        {
+            var operations = _mockDatabase.Operations
+                .Where(x => x.TransactionId == transactionId)
+                .Where(x => operationStatuses.Contains(x.Status));
+
+            return Task.FromResult(operations);
+        }
+
+        public Task UpdateOperationsStatuses(IEnumerable<long> operationIds, string status, CancellationToken cancellationToken)
+        {
+            foreach (var operationId in operationIds)
+            {
+                var operation = _mockDatabase.Operations.FirstOrDefault(x => x.Id == operationId);
+                if (operation is null) continue;
                 operation.Status = status;
             }
 

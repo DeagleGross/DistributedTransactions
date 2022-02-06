@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.DAL.Abstractions;
 using DistributedTransactions.DAL.Models;
-using DistributedTransactions.Tests.Mocks.Database;
 
 namespace DistributedTransactions.Tests.Mocks
 {
-    public class TransactionRepository : ITransactionRepository
+    internal class TransactionRepository : ITransactionRepository
     {
         private readonly MockDatabase _mockDatabase;
 
@@ -39,6 +36,22 @@ namespace DistributedTransactions.Tests.Mocks
         {
             _mockDatabase.Transactions.FirstOrDefault(x => x.Id == transactionId)!.Status = newTransactionStatus;
             return Task.CompletedTask;
+        }
+
+        public Task<IEnumerable<TransactionEntity>> GetByTransactionType(string transactionType, CancellationToken cancellationToken)
+        {
+            var transactions = _mockDatabase.Transactions
+                .Where(x => x.TransactionType == transactionType);
+
+            return Task.FromResult(transactions);
+        }
+
+        public Task<IEnumerable<TransactionEntity>> GetAllByStatuses(string[] statuses, CancellationToken cancellationToken)
+        {
+            var transactions = _mockDatabase.Transactions
+                .Where(x => statuses.Contains(x.Status));
+
+            return Task.FromResult(transactions);
         }
     }
 }

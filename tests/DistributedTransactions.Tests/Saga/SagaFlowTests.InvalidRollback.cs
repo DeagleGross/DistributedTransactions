@@ -3,31 +3,37 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DistributedTransactions.Attributes;
-using DistributedTransactions.Builders;
-using DistributedTransactions.Executors;
-using DistributedTransactions.Models;
-using DistributedTransactions.Models.Abstractions;
 using DistributedTransactions.Providers.Abstractions;
+using DistributedTransactions.Saga.Models.Abstractions;
 using DistributedTransactions.Tests.Base;
 using DistributedTransactions.Tests.Mocks;
-using DistributedTransactions.Tests.Mocks.Database;
 using DistributedTransactions.Tests.Mocks.Models;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace DistributedTransactions.Tests
+namespace DistributedTransactions.Tests.Saga
 {
     [TestFixture]
-    internal class DistributedTransactionInvalidsRollbackFlowTests : DistributedTransactionsTestsBase
+    internal class SagaInvalidsRollbackFlowTests : DistributedTransactionsTestsBase
     {
+        private ITransactionProvider _transactionProvider;
+        private IOperationProvider _operationProvider;
         private MockDatabase _mockDatabase;
+
+        [OneTimeSetUp]
+        public void SetupServiceProvider()
+        {
+            OneTimeSetup();
+        }
 
         [SetUp]
         public void Setup()
         {
+            _transactionProvider = TransactionProvider;
+            _operationProvider = OperationProvider;
             _mockDatabase = MockDatabase;
-            _mockDatabase.ClearAll();
+
+            _mockDatabase.Clear();
         }
 
         [Test]
@@ -39,18 +45,7 @@ namespace DistributedTransactions.Tests
                 Name = "Audi"
             };
 
-            var auto = new Auto
-            {
-                Id = 1,
-                ManufacturerId = 1,
-                Name = "A7"
-            };
-
-            var distributedTransactionExecutor = DistributedTransactionExecutorBuilder
-                .CreateDistributedTransactionExecutor(TransactionContext)
-                .UseLogger(GetLogger<DistributedTransactionExecutor>())
-                .UseTransactionProvider(TransactionProvider)
-                .UseOperationProvider(OperationProvider);
+            var sagaExecutor = SagaExecutorBuilder.ValidateAndBuild();
 
             var createManufacturer = new CreateManufacturer(TransactionContext)
             {
@@ -59,25 +54,34 @@ namespace DistributedTransactions.Tests
 
             var createAuto = new CreateAuto(TransactionContext)
             {
-                Auto = auto
             };
 
-            distributedTransactionExecutor.RegisterOperation(createManufacturer);
-            distributedTransactionExecutor.RegisterOperation(createAuto);
+            sagaExecutor.RegisterOperation(createManufacturer);
+            sagaExecutor.RegisterOperation(createAuto);
 
-            await distributedTransactionExecutor.ExecuteFullTransactionAsync(CancellationToken.None);
+            await sagaExecutor.ExecuteTransactionAsync(CancellationToken.None);
 
-            _mockDatabase.Transactions.First().Status.Should().Be(TransactionStatus.NeedsToRollback.ToString());
-            _mockDatabase.Operations.First().Status.Should().Be(OperationStatus.NeedsToRollback.ToString());
+            // instance status
+            sagaExecutor.Status.Should().Be(TransactionStatus.FailedToRollback);
+            sagaExecutor.LastOccuredException.Should().NotBeNull();
+            sagaExecutor.LastOccuredException.GetType().Should().Be(typeof(NotImplementedException));
+
+            // in database entities
+            var transactionId = sagaExecutor.TransactionId!.Value;
+            var transaction = await _transactionProvider.GetByTransactionIdAsync(transactionId, CancellationToken.None);
+            transaction.Status.Should().Be(TransactionStatus.FailedToRollback);
+
+            var operation = await _operationProvider.GetByTransactionIdAsync(transactionId, CancellationToken.None);
+            operation.First().Status.Should().Be(OperationStatus.FailedToRollback);
 
             _mockDatabase.Manufacturers.Should().NotBeEmpty();
             _mockDatabase.Autos.Should().BeEmpty();
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateManufacturer))]
-        internal class CreateManufacturer : DistributedTransactionOperationBase<long>
+        private class CreateManufacturer : SagaOperationBase<long>
         {
-            public Manufacturer Manufacturer { get; set; }
+            public Manufacturer Manufacturer { get; init; }
 
             private readonly MockDatabase _mockDatabase;
 
@@ -89,7 +93,7 @@ namespace DistributedTransactions.Tests
             public override Task CommitAsync(CancellationToken cancellationToken)
             {
                 _mockDatabase.Manufacturers.Add(Manufacturer);
-                
+
                 // saving as rollback data
                 RollbackData = Manufacturer.Id;
 
@@ -103,9 +107,8 @@ namespace DistributedTransactions.Tests
         }
 
         [DistributedTransactionOperation(nameof(TransactionType.CreateManufacturerWithAuto), nameof(OperationType.CreateAuto))]
-        internal class CreateAuto : DistributedTransactionOperationBase<long>
+        private class CreateAuto : SagaOperationBase<long>
         {
-            public Auto Auto { get; set; }
 
             private readonly MockDatabase _mockDatabase;
 

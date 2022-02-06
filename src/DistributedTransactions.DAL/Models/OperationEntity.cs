@@ -1,6 +1,4 @@
-﻿using System.Transactions;
-
-namespace DistributedTransactions.DAL.Models
+﻿namespace DistributedTransactions.DAL.Models
 {
     /// <summary>
     /// Every single operation executed as a part of transaction by service is saved for possible rollbacks.
@@ -27,7 +25,13 @@ namespace DistributedTransactions.DAL.Models
         /// <summary>
         /// Priority of operation when rollback of transaction is executed.
         /// </summary>
-        public int? RollbackOperationPriority { get; set; }
+        public int? RollbackPriority { get; set; }
+
+        /// <summary>
+        /// Stage of execution. Allows different operations with same `ExecutionStage` to execute in parallel.
+        /// The more execution stage value is, the latter it will be executed.
+        /// </summary>
+        public int? ExecutionStage { get; set; }
 
         /// <summary>
         /// System.Type of rollback_data_type saved for rollback_data for further deserialization

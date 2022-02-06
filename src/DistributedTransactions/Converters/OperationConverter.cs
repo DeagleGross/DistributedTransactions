@@ -2,7 +2,8 @@
 using DistributedTransactions.DAL.Models;
 using DistributedTransactions.Helpers.Extensions;
 using DistributedTransactions.Models;
-using DistributedTransactions.Models.Abstractions;
+using DistributedTransactions.Saga.Models;
+using DistributedTransactions.Saga.Models.Abstractions;
 
 namespace DistributedTransactions.Converters
 {
@@ -14,7 +15,8 @@ namespace DistributedTransactions.Converters
             TransactionId = operation.TransactionId,
             OperationType = operation.OperationType,
             ExecutorType = operation.ExecutorType.AssemblyQualifiedName,
-            RollbackOperationPriority = operation.RollbackOperationPriority,
+            RollbackPriority = operation.RollbackOperationPriority,
+            ExecutionStage = operation.ExecutionStage,
             // rollback_data
             RollbackDataType = operation.RollbackDataType.AssemblyQualifiedName,
             RollbackData = operation.RollbackData.Serialize(operation.RollbackDataType),
@@ -31,18 +33,19 @@ namespace DistributedTransactions.Converters
                 Id = entity.Id,
                 TransactionId = entity.TransactionId,
                 OperationType = entity.OperationType,
-                RollbackOperationPriority = entity.RollbackOperationPriority,
+                RollbackOperationPriority = entity.RollbackPriority,
+                ExecutionStage = entity.ExecutionStage,
                 ExecutorType = executorType,
                 // rollback_data
                 RollbackDataType = rollbackDataType,
                 RollbackData = entity.RollbackData.Deserialize(rollbackDataType),
-                Status = Enum.Parse<OperationStatus>(entity.Status)
+                Status = Enum.TryParse<OperationStatus>(entity.Status, true, out var status) ? status : throw new ArgumentException(entity.Status)
             };
         }
 
-        public static IDistributedTransactionOperation ToObjectOrientedOperation<TRollbackData>(IDistributedTransactionOperation<TRollbackData> genericOperation)
+        public static ISagaOperation ToObjectOrientedOperation<TRollbackData>(ISagaOperation<TRollbackData> genericOperation)
         {
-            return new DistributedTransactionOperation(genericOperation, genericOperation.RollbackData);
+            return new SagaOperation(genericOperation, genericOperation.RollbackData);
         }
     }
 }

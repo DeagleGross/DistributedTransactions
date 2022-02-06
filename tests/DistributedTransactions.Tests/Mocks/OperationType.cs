@@ -3,6 +3,7 @@
     internal enum OperationType
     {
         CreateManufacturer,
-        CreateAuto
+        CreateAuto,
+        CreateAutoSecond
     }
 }

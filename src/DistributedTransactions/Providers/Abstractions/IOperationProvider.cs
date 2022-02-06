@@ -1,20 +1,26 @@
 ﻿using System.Collections.Generic;
-using DistributedTransactions.Models;
 using System.Threading;
 using System.Threading.Tasks;
+using DistributedTransactions.Metrics.Abstractions;
+using DistributedTransactions.Models;
+using DistributedTransactions.Models.Settings;
 
 namespace DistributedTransactions.Providers.Abstractions
 {
     public interface IOperationProvider
     {
-        Task<Operation> GetByOperationIdAsync(long operationId, CancellationToken cancellationToken);
+        internal DistributedTransactionServiceOwnerInfo DistributedTransactionServiceOwnerInfo { get; set; }
 
-        Task<IEnumerable<Operation>> GetByTransactionIdAndStatusAsync(long transactionId, OperationStatus status, CancellationToken cancellationToken);
+        internal IDistributedTransactionsMetricsSender DistributedTransactionsMetricsSender { get; set; }
+
+        Task<IEnumerable<Operation>> GetByTransactionIdAsync(long transactionId, CancellationToken cancellationToken);
+
+        Task<IEnumerable<Operation>> GetByTransactionIdAndStatusAsync(long transactionId, OperationStatus[] statuses, CancellationToken cancellationToken);
 
         Task<Operation> CreateAsync(Operation operation, CancellationToken cancellationToken);
 
-        Task UpdateOperationStatus(long operationId, OperationStatus status, CancellationToken cancellationToken);
+        Task UpdateOperationStatus(Operation operation, OperationStatus status, CancellationToken cancellationToken);
 
-        Task UpdateOperationsStatus(IEnumerable<long> operationIds, OperationStatus status, CancellationToken cancellationToken);
+        Task UpdateOperationsStatus(ICollection<Operation> operations, OperationStatus status, CancellationToken cancellationToken);
     }
 }
